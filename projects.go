@@ -30,7 +30,7 @@ var _ ProjectsService = &ProjectsServiceOp{}
 type Project struct {
 	PHID    string   `json:"phid"`
 	Name    string   `json:"name"`
-	Tags    []string `json:"tags"`
+	Tags    []string `json:"slugs"`
 	Members []string `json:"members"`
 	Icon    string   `json:"icon"`
 	Color   string   `json:"color"`
@@ -38,18 +38,6 @@ type Project struct {
 
 func (f Project) String() string {
 	return Stringify(f)
-}
-
-// What is returned by a base project.query request
-type projectsRoot struct {
-	Projects []Project `json:"results"`
-	Links    *Links    `json:"links"`
-}
-
-// Single request to a project root (Phabricator doesn't understand this)
-type projectRoot struct {
-	Project *Project `json:"results"`
-	Links   *Links   `json:"links,omitempty"`
 }
 
 // ProjectCreateRequest represents a request to create a Project.
@@ -72,6 +60,23 @@ type ProjectUpdateRequest struct {
 	Color   string   `json:"color,omitempty"`
 }
 
+type ProjectResult struct {
+	Data map[string]Project `json:"data"`
+}
+
+type PhabricatorCursor struct {
+	Limit  int    `json:"limit"`
+	After  string `json:"after"`
+	Before string `json:"before"`
+}
+
+type ProjectResponse struct {
+	Result    ProjectResult     `json:"result"`
+	Cursor    PhabricatorCursor `json:"cursor"`
+	ErrorCode string            `json:"error_code,omitempty"`
+	ErrorInfo string            `json:"error_info,omitempty"`
+}
+
 // List all projects.
 func (f *ProjectsServiceOp) List(opt *ListOptions) ([]Project, *Response, error) {
 	path := projectsQueryPath
@@ -85,16 +90,18 @@ func (f *ProjectsServiceOp) List(opt *ListOptions) ([]Project, *Response, error)
 		return nil, nil, err
 	}
 
-	root := new(projectsRoot)
+	root := new(ProjectResponse)
 	resp, err := f.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
-	if l := root.Links; l != nil {
-		resp.Links = l
+
+	var list []Project
+	for _, project := range root.Result.Data {
+		list = append(list, project)
 	}
 
-	return root.Projects, resp, err
+	return list, resp, err
 }
 
 // Get an individual project.
@@ -107,17 +114,22 @@ func (f *ProjectsServiceOp) Get(name string) (*Project, *Response, error) {
 		return nil, nil, err
 	}
 
-	root := new(projectsRoot)
+	root := new(ProjectResponse)
 	resp, err := f.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	if len(root.Projects) < 1 {
+	var list []Project
+	for _, project := range root.Result.Data {
+		list = append(list, project)
+	}
+
+	if len(list) < 1 {
 		return nil, resp, nil
 	}
 
-	return &root.Projects[0], resp, err
+	return &list[0], resp, err
 }
 
 // Create a project
@@ -129,16 +141,18 @@ func (f *ProjectsServiceOp) Create(createRequest *ProjectCreateRequest) (*Projec
 		return nil, nil, err
 	}
 
-	root := new(projectRoot)
+	root := new(ProjectResponse)
 	resp, err := f.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
-	if l := root.Links; l != nil {
-		resp.Links = l
+
+	var list []Project
+	for _, project := range root.Result.Data {
+		list = append(list, project)
 	}
 
-	return root.Project, resp, err
+	return nil, resp, err
 }
 
 // Update a Project (Not Available Yet!)

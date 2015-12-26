@@ -11,7 +11,6 @@ import (
 	"reflect"
 
 	"github.com/google/go-querystring/query"
-	headerLink "github.com/tent/http-link-go"
 )
 
 const (
@@ -61,10 +60,6 @@ type ListOptions struct {
 // Response is a DigitalOcean response. This wraps the standard http.Response returned from DigitalOcean.
 type Response struct {
 	*http.Response
-
-	// Links that were returned with the response. These are parsed from
-	// request body and not the header.
-	Links *Links
 
 	// Monitoring URI
 	Monitor string
@@ -171,25 +166,6 @@ func newResponse(r *http.Response) *Response {
 	response := Response{Response: r}
 
 	return &response
-}
-
-func (r *Response) links() (map[string]headerLink.Link, error) {
-	if linkText, ok := r.Response.Header["Link"]; ok {
-		links, err := headerLink.Parse(linkText[0])
-
-		if err != nil {
-			return nil, err
-		}
-
-		linkMap := map[string]headerLink.Link{}
-		for _, link := range links {
-			linkMap[link.Rel] = link
-		}
-
-		return linkMap, nil
-	}
-
-	return map[string]headerLink.Link{}, nil
 }
 
 // Do sends an API request and returns the API response. The API response is JSON decoded and stored in the value

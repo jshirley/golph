@@ -243,18 +243,6 @@ func TestErrorResponse_Error(t *testing.T) {
 	}
 }
 
-func checkCurrentPage(t *testing.T, resp *Response, expectedPage int) {
-	links := resp.Links
-	p, err := links.CurrentPage()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if p != expectedPage {
-		t.Fatalf("expected current page to be '%d', was '%d'", expectedPage, p)
-	}
-}
-
 func TestDo_completion_callback(t *testing.T) {
 	setup()
 	defer teardown()
