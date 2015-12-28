@@ -3,7 +3,7 @@ package golph
 import (
 	"errors"
 	"fmt"
-	"net/url"
+	//"net/url"
 )
 
 const projectsQueryPath = "api/project.query"
@@ -40,13 +40,17 @@ func (f Project) String() string {
 	return Stringify(f)
 }
 
+type ProjectSearchRequest struct {
+	Names string `form:"names"`
+}
+
 // ProjectCreateRequest represents a request to create a Project.
 type ProjectCreateRequest struct {
-	Name    string   `json:"name"`
-	Tags    []string `json:"tags,omitempty"`
-	Members []string `json:"members,omitempty"`
-	Icon    string   `json:"icon,omitempty"`
-	Color   string   `json:"color,omitempty"`
+	Name    string `form:"name"`
+	Tags    string `form:"tags"`
+	Members string `form:"members"`
+	Icon    string `form:"icon"`
+	Color   string `form:"color"`
 }
 
 // ProjectUpdateRequest represents a request to update a Project.
@@ -68,6 +72,12 @@ type PhabricatorCursor struct {
 	Limit  int    `json:"limit"`
 	After  string `json:"after"`
 	Before string `json:"before"`
+}
+
+type ProjectCreateResponse struct {
+	Result    Project `json:"result"`
+	ErrorCode string  `json:"error_code,omitempty"`
+	ErrorInfo string  `json:"error_info,omitempty"`
 }
 
 type ProjectResponse struct {
@@ -106,10 +116,11 @@ func (f *ProjectsServiceOp) List(opt *ListOptions) ([]Project, *Response, error)
 
 // Get an individual project.
 func (f *ProjectsServiceOp) Get(name string) (*Project, *Response, error) {
-	form := url.Values{}
-	form.Add("names", fmt.Sprintf("[\"%s\"]", name))
+	searchRequest := &ProjectSearchRequest{
+		Names: fmt.Sprintf("[\"%s\"]", name), // This is a JSON encoded string which is silly
+	}
 
-	req, err := f.client.NewRequest("POST", projectsQueryPath, form)
+	req, err := f.client.NewRequest("POST", projectsQueryPath, searchRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,18 +152,13 @@ func (f *ProjectsServiceOp) Create(createRequest *ProjectCreateRequest) (*Projec
 		return nil, nil, err
 	}
 
-	root := new(ProjectResponse)
+	root := new(ProjectCreateResponse)
 	resp, err := f.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	var list []Project
-	for _, project := range root.Result.Data {
-		list = append(list, project)
-	}
-
-	return nil, resp, err
+	return &root.Result, resp, err
 }
 
 // Update a Project (Not Available Yet!)

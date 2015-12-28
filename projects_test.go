@@ -1,7 +1,7 @@
 package golph
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -108,32 +108,28 @@ func TestProjects_Create(t *testing.T) {
 	defer teardown()
 
 	createRequest := &ProjectCreateRequest{
-		Name: "Test Project 1",
+		Name:    "Test Project 1",
+		Tags:    "[]",
+		Members: "[]",
+		Icon:    "umbrella",
+		Color:   "violet",
 	}
 
 	mux.HandleFunc("/api/project.create", func(w http.ResponseWriter, r *http.Request) {
-		v := new(ProjectCreateRequest)
-		err := json.NewDecoder(r.Body).Decode(v)
-		if err != nil {
-			t.Fatal(err)
-		}
-
 		testMethod(t, r, "POST")
-		if !reflect.DeepEqual(v, createRequest) {
-			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
+		if r.PostFormValue("name") != createRequest.Name {
+			t.Errorf("Form name = %+v, expected %+v", r.PostFormValue("name"), createRequest.Name)
 		}
-
-		fmt.Fprint(w, `{"result":{"PHID": "PHID-1234567","name":"Test Project 1"}}`)
+		fmt.Fprint(w, `{"result":{"id":1,"phid":"PHID-PROJ-1234","name":"Test Project 1","profileImagePHID":null,"icon":"umbrella","color":"violet","members":[],"slugs":[],"dateCreated":1451319026,"dateModified":1451319026},"error_code":null,"error_info":null}`)
 	})
-	/*
-		project, _, err := client.Projects.Create(createRequest)
-		if err != nil {
-			t.Errorf("Project.Create returned error: %v", err)
-		}
 
-		expected := &Project{PHID: "PHID-1234567", Name: "Test Project 1"}
-		if !reflect.DeepEqual(project, expected) {
-			t.Errorf("Projects.Create returned %+v, expected %+v", project, expected)
-		}
-	*/
+	project, _, err := client.Projects.Create(createRequest)
+	if err != nil {
+		t.Errorf("Project.Create returned error: %v", err)
+	}
+
+	expected := &Project{PHID: "PHID-PROJ-1234", Name: "Test Project 1", Icon: "umbrella", Color: "violet", Members: []string{}, Tags: []string{}}
+	if !reflect.DeepEqual(project, expected) {
+		t.Errorf("Projects.Create returned %+v, expected %+v", project, expected)
+	}
 }

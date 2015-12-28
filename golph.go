@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/google/go-querystring/query"
 )
@@ -18,6 +20,7 @@ const (
 	defaultBaseURL = "https://secure.phabricator.url/"
 	userAgent      = "golph/" + libraryVersion
 	mediaType      = "application/json"
+	postMediaType  = "application/x-www-form-urlencoded; param=value"
 )
 
 // Client manages communication to Phabricator
@@ -121,12 +124,6 @@ func NewClient(apiToken string, phabricatorUrl string, httpClient *http.Client) 
 	return c
 }
 
-/***** \/\/\/\/\/
-
-All of what follows is cargoculted from digitalocean/godo
-
-^^^^^^^^^^ *****/
-
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
@@ -137,24 +134,28 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	}
 
 	u := c.BaseURL.ResolveReference(rel)
-	buf := new(bytes.Buffer)
+
+	buf := strings.NewReader("")
 	if body != nil {
-		err := json.NewEncoder(buf).Encode(body)
-		if err != nil {
-			return nil, err
-		}
+		buf = strings.NewReader(structToValues(body).Encode())
 	}
 
 	req, err := http.NewRequest(method, u.String(), buf)
 	if err != nil {
 		return nil, err
 	}
-
-	//req.Header.Add("Content-Type", mediaType)
-	//req.Header.Add("Accept", mediaType)
+	req.Header.Add("Content-Type", postMediaType)
+	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", userAgent)
+
 	return req, nil
 }
+
+/***** \/\/\/\/\/
+
+Most of what follows is cargoculted from digitalocean/godo
+
+^^^^^^^^^^ *****/
 
 // OnRequestCompleted sets the Phabricator API request completion callback
 func (c *Client) OnRequestCompleted(rc RequestCompletionCallback) {
@@ -267,4 +268,37 @@ func StreamToString(stream io.Reader) string {
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(stream)
 	return buf.String()
+}
+
+func structToValues(i interface{}) (values url.Values) {
+	values = url.Values{}
+	iVal := reflect.ValueOf(i).Elem()
+	typ := iVal.Type()
+	for i := 0; i < iVal.NumField(); i++ {
+		f := iVal.Field(i)
+		// You ca use tags here...
+		// tag := typ.Field(i).Tag.Get("tagname")
+		// Convert each type into a string for the url.Values string map
+		var v string
+		switch f.Interface().(type) {
+		case int, int8, int16, int32, int64:
+			v = strconv.FormatInt(f.Int(), 10)
+		case uint, uint8, uint16, uint32, uint64:
+			v = strconv.FormatUint(f.Uint(), 10)
+		case float32:
+			v = strconv.FormatFloat(f.Float(), 'f', 4, 32)
+		case float64:
+			v = strconv.FormatFloat(f.Float(), 'f', 4, 64)
+		case []byte:
+			v = string(f.Bytes())
+		case string:
+			v = f.String()
+		}
+		fieldName := typ.Field(i).Name
+		if typ.Field(i).Tag.Get("form") != "" {
+			fieldName = typ.Field(i).Tag.Get("form")
+		}
+		values.Set(fieldName, v)
+	}
+	return
 }
