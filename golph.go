@@ -40,7 +40,7 @@ type Client struct {
 
 	// Conduit connections, see https://secure.phabricator.com/conduit/
 	Projects ProjectsService
-	//Tasks    TasksService
+	Tasks    TasksService
 	//Users    UsersService
 
 	// Optional function called after every successful request made to the Phabricator APIs
@@ -118,7 +118,7 @@ func NewClient(apiToken string, phabricatorUrl string, httpClient *http.Client) 
 
 	c := &Client{client: httpClient, apiToken: apiToken, BaseURL: baseURL, UserAgent: userAgent}
 	c.Projects = &ProjectsServiceOp{client: c}
-	//c.Tasks = &TasksServiceOp{client: c}
+	c.Tasks = &TasksServiceOp{client: c}
 	//c.Users = &UsersServiceOp{client: c}
 
 	return c
