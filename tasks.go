@@ -104,6 +104,7 @@ type TaskCreateRequest struct {
 type TaskUpdateRequest struct {
 	Id          string `form:"id"`
 	PHID        string `form:"phid"`
+	Title       string `form:"title"`
 	Description string `form:"description"`
 	Projects    string `form:"projectPHIDs"`
 	OwnerPHIDs  string `form:"ownerPHID"`

@@ -140,5 +140,27 @@ func TestTasks_Update(t *testing.T) {
 	setup()
 	defer teardown()
 
-	t.Errorf("Task.Update")
+	updateRequest := &TaskUpdateRequest{
+		Id:      "1000",
+		Title:   "Would update Title",
+		Comment: "This should add a comment",
+	}
+
+	mux.HandleFunc("/api/maniphest.update", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "POST")
+		if r.PostFormValue("id") != updateRequest.Id {
+			t.Errorf("Form name = %+v, expected %+v", r.PostFormValue("id"), updateRequest.Id)
+		}
+		if r.PostFormValue("comments") != updateRequest.Comment {
+			t.Errorf("Form name = %+v, expected %+v", r.PostFormValue("comments"), updateRequest.Comment)
+		}
+		fmt.Fprint(w, `{"result":{"id":"1000","phid":"PHID-TASK-2","authorPHID":"PHID-USER-1","ownerPHID":null,"ccPHIDs":["PHID-USER-2"],"status":"open","statusName":"Open","isClosed":false,"priority":"Normal","priorityColor":"green","title":"Would update Title","description":"Golph created this task","projectPHIDs":["PHID-PROJ-1"],"uri":"https://phabricator.example.com/T2000","auxiliary":{},"objectName":"T2000","dateCreated":"1451337180","dateModified":"1451337180","dependsOnTaskPHIDs":[]},"error_code":null,"error_info":null}`)
+	})
+
+	_, err := client.Tasks.Update(updateRequest)
+	if err != nil {
+		t.Errorf("Tasks.Update returned error: %v", err)
+	}
+
+	// Right now the Update interface doesn't return the updated object
 }
