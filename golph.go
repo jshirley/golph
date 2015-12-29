@@ -134,16 +134,17 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	}
 
 	u := c.BaseURL.ResolveReference(rel)
+	postForm := url.Values{}
 
-	buf := strings.NewReader("")
 	if body != nil {
-		postForm := structToValues(body)
-		if method == "POST" {
-			postForm.Set("api.token", c.apiToken)
-		}
-
-		buf = strings.NewReader(postForm.Encode())
+		postForm = structToValues(body)
 	}
+
+	if method == "POST" {
+		postForm.Set("api.token", c.apiToken)
+	}
+
+	buf := strings.NewReader(postForm.Encode())
 
 	req, err := http.NewRequest(method, u.String(), buf)
 	if err != nil {
@@ -178,13 +179,11 @@ func newResponse(r *http.Response) *Response {
 // pointed to by v, or returned as an error if an API error has occurred. If v implements the io.Writer interface,
 // the raw response will be written to v, without attempting to decode it.
 func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
-	//req.ParseForm()
-	//req.Form.Add("api.token", c.apiToken)
-
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+
 	if c.onRequestCompleted != nil {
 		c.onRequestCompleted(req, resp)
 	}
