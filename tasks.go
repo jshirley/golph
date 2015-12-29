@@ -76,6 +76,10 @@ func (f Task) String() string {
 	return Stringify(f)
 }
 
+type TaskGetRequest struct {
+	TaskId string `form:"task_id"`
+}
+
 type TaskSearchRequest struct {
 	TaskId       string `form:"task_id"`
 	IDs          string `form:"ids"`
@@ -125,6 +129,13 @@ type TaskResponse struct {
 	ErrorInfo string          `json:"error_info,omitempty"`
 }
 
+// Search for tasks
+func (f *TasksServiceOp) Search(TaskSearchRequest) ([]Task, *Response, error) {
+	var list []Task
+
+	return list, nil, nil
+}
+
 // List all tasks.
 func (f *TasksServiceOp) List(opt *ListOptions) ([]Task, *Response, error) {
 	path := tasksQueryPath
@@ -153,7 +164,7 @@ func (f *TasksServiceOp) List(opt *ListOptions) ([]Task, *Response, error) {
 
 // Get an individual task (through the tasksFetchPath, maniphest.info).
 func (f *TasksServiceOp) Get(task_id string) (*Task, *Response, error) {
-	searchRequest := &TaskSearchRequest{
+	searchRequest := &TaskGetRequest{
 		TaskId: task_id, // This is the "5000" part of "T5000"
 	}
 
@@ -166,6 +177,10 @@ func (f *TasksServiceOp) Get(task_id string) (*Task, *Response, error) {
 	resp, err := f.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
+	}
+
+	if root.ErrorCode != "" {
+		return nil, resp, errors.New(root.ErrorInfo)
 	}
 
 	return &root.Task, resp, err
