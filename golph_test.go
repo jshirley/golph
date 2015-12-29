@@ -79,24 +79,22 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewRequest(t *testing.T) {
-	c := NewClient("api-token", "", nil)
+	apiToken := "api-token"
+	c := NewClient(apiToken, "", nil)
 
 	inURL, outURL := "/foo", defaultBaseURL+"foo"
 	inBody := &ProjectCreateRequest{Name: "l"}
-	req, _ := c.NewRequest("GET", inURL, inBody)
+	req, _ := c.NewRequest("POST", inURL, inBody)
 
 	// test relative URL was expanded
 	if req.URL.String() != outURL {
 		t.Errorf("NewRequest(%v) URL = %v, expected %v", inURL, req.URL, outURL)
 	}
 
-	// TODO: test body has a form
-	/*
-		body, _ := ioutil.ReadAll(req.Body)
-		if string(body) != outBody {
-			t.Errorf("NewRequest(%v)Body = %v, expected %v", inBody, string(body), outBody)
-		}
-	*/
+	if req.PostFormValue("api.token") != apiToken {
+		t.Errorf("req.PostFormValue(api.token) = %v, expected %v", req.PostFormValue("api.token"), apiToken)
+	}
+
 	// test default user-agent is attached to the request
 	userAgent := req.Header.Get("User-Agent")
 	if c.UserAgent != userAgent {

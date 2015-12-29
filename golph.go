@@ -137,7 +137,12 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 
 	buf := strings.NewReader("")
 	if body != nil {
-		buf = strings.NewReader(structToValues(body).Encode())
+		postForm := structToValues(body)
+		if method == "POST" {
+			postForm.Set("api.token", c.apiToken)
+		}
+
+		buf = strings.NewReader(postForm.Encode())
 	}
 
 	req, err := http.NewRequest(method, u.String(), buf)
