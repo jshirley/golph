@@ -9,6 +9,7 @@ import (
 
 const (
 	listTaskJSON   = `{"result":{"PHID-TASK-1":{"id":"1000","phid":"PHID-TASK-1","authorPHID":"PHID-USER-1","ownerPHID":null,"ccPHIDs":["PHID-USER-2","PHID-USER-3"],"status":"resolved","statusName":"Resolved","isClosed":true,"priority":"Needs Triage","priorityColor":"violet","title":"Test List","description":"We only test one item in the list, because Phab returns a map and the order isn't fixed :(","projectPHIDs":["PHID-PROJ-1","PHID-PROJ-2"],"uri":"https://phabricator.example.com/T1000","auxiliary":{},"objectName":"T1000","dateCreated":"1415646583","dateModified":"1451336014","dependsOnTaskPHIDs":[]}},"error_code":null,"error_info":null}`
+	getTaskJSON    = `{"result":{"id":"1000","phid":"PHID-TASK-1","authorPHID":"PHID-USER-1","ownerPHID":null,"ccPHIDs":["PHID-USER-2","PHID-USER-3"],"status":"resolved","statusName":"Resolved","isClosed":true,"priority":"Needs Triage","priorityColor":"violet","title":"Test List","description":"We only test one item in the list, because Phab returns a map and the order isn't fixed :(","projectPHIDs":["PHID-PROJ-1","PHID-PROJ-2"],"uri":"https://phabricator.example.com/T1000","auxiliary":{},"objectName":"T1000","dateCreated":"1415646583","dateModified":"1451336014","dependsOnTaskPHIDs":[]},"error_code":null,"error_info":null}`
 	updateTaskJSON = `{"result":{"id":"1000","phid":"PHID-TASK-1","authorPHID":"PHID-USER-1","ownerPHID":null,"ccPHIDs":["PHID-USER-2","PHID-USER-3"],"status":"resolved","statusName":"Resolved","isClosed":true,"priority":"Needs Triage","priorityColor":"violet","title":"Awesome Task","description":"A description goes here","projectPHIDs":["PHID-PROJ-1","PHID-PROJ-2"],"uri":"https://phabricator.example.com/T1000","auxiliary":{},"objectName":"T1000","dateCreated":"1415646583","dateModified":"1451336014","dependsOnTaskPHIDs":[]},"error_code":null,"error_info":null}`
 )
 
@@ -28,23 +29,25 @@ func TestTasks_ListTasks(t *testing.T) {
 
 	expected := []Task{
 		{
-			PHID:          "PHID-PROJ-1",
+			PHID:          "PHID-TASK-1",
 			Author:        "PHID-USER-1",
 			Owner:         "",
 			Title:         "Test List",
 			Description:   "We only test one item in the list, because Phab returns a map and the order isn't fixed :(",
-			Projects:      []string{"PHID-PROJ-1"},
+			Projects:      []string{"PHID-PROJ-1", "PHID-PROJ-2"},
 			CCs:           []string{"PHID-USER-2", "PHID-USER-3"},
 			Status:        "resolved",
 			StatusName:    "Resolved",
 			IsClosed:      true,
 			Priority:      "Needs Triage",
 			PriorityColor: "violet",
+			URI:           "https://phabricator.example.com/T1000",
+			ObjectName:    "T1000",
 		},
 	}
 
 	if !reflect.DeepEqual(tasks, expected) {
-		t.Errorf("Tasks.List returned %+v, expected %+v", tasks, expected)
+		t.Errorf("Tasks.List returned:\n%+v\nExpected:\n%+v", tasks, expected)
 	}
 }
 
@@ -55,7 +58,7 @@ func TestTasks_Get(t *testing.T) {
 	mux.HandleFunc("/api/maniphest.info", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "POST")
 
-		fmt.Fprint(w, listTaskJSON)
+		fmt.Fprint(w, getTaskJSON)
 	})
 
 	task, _, err := client.Tasks.Get("2000")
@@ -63,25 +66,25 @@ func TestTasks_Get(t *testing.T) {
 		t.Errorf("Tasks.Get returned error: %v", err)
 	}
 
-	expected := Task{
-		PHID:          "PHID-PROJ-1",
+	expected := &Task{
+		PHID:          "PHID-TASK-1",
 		Author:        "PHID-USER-1",
 		Owner:         "",
 		Title:         "Test List",
 		Description:   "We only test one item in the list, because Phab returns a map and the order isn't fixed :(",
-		Projects:      []string{"PHID-PROJ-1"},
-		CCs:           []string{"PHID-USER-1", "PHID-USER-2"},
+		Projects:      []string{"PHID-PROJ-1", "PHID-PROJ-2"},
+		CCs:           []string{"PHID-USER-2", "PHID-USER-3"},
 		Status:        "resolved",
 		StatusName:    "Resolved",
 		IsClosed:      true,
 		Priority:      "Needs Triage",
 		PriorityColor: "violet",
-		URI:           "https://phabricator.example.com/T2000",
-		ObjectName:    "T2000",
+		URI:           "https://phabricator.example.com/T1000",
+		ObjectName:    "T1000",
 	}
 
 	if !reflect.DeepEqual(task, expected) {
-		t.Errorf("Tasks.Get returned %+v, expected %+v", task, expected)
+		t.Errorf("Tasks.Get returned:\n%+v\nExpected:\n%+v", task, expected)
 	}
 }
 
@@ -129,7 +132,7 @@ func TestTasks_Create(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(task, expected) {
-		t.Errorf("Task.Create returned:\n%+v\nExpected:\n%+v", task, expected)
+		t.Errorf("Tasks.Create returned:\n%+v\nExpected:\n%+v", task, expected)
 	}
 }
 

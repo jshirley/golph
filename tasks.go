@@ -119,7 +119,7 @@ type SingleTaskResponse struct {
 }
 
 type TaskResponse struct {
-	Tasks     map[string]Task `json:"results"`
+	Tasks     map[string]Task `json:"result"`
 	ErrorCode string          `json:"error_code,omitempty"`
 	ErrorInfo string          `json:"error_info,omitempty"`
 }
