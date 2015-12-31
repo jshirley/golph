@@ -41,7 +41,7 @@ type Client struct {
 	// Conduit connections, see https://secure.phabricator.com/conduit/
 	Projects ProjectsService
 	Tasks    TasksService
-	//Users    UsersService
+	Users    UsersService
 
 	// Optional function called after every successful request made to the Phabricator APIs
 	onRequestCompleted RequestCompletionCallback
@@ -122,7 +122,7 @@ func NewClient(apiToken string, phabricatorUrl string, httpClient *http.Client) 
 	c := &Client{client: httpClient, apiToken: apiToken, BaseURL: baseURL, UserAgent: userAgent}
 	c.Projects = &ProjectsServiceOp{client: c}
 	c.Tasks = &TasksServiceOp{client: c}
-	//c.Users = &UsersServiceOp{client: c}
+	c.Users = &UsersServiceOp{client: c}
 
 	return c
 }
@@ -149,6 +149,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 
 	buf := strings.NewReader(postForm.Encode())
 
+	//fmt.Printf("Sending form to Phabricator: %+q\n", buf)
 	req, err := http.NewRequest(method, u.String(), buf)
 	if err != nil {
 		return nil, err
@@ -203,7 +204,10 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	if err != nil {
 		return response, err
 	}
-
+	/*
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(body))
+	*/
 	if v != nil {
 		if w, ok := v.(io.Writer); ok {
 			_, err := io.Copy(w, resp.Body)
@@ -286,6 +290,14 @@ func structToValues(i interface{}) (values url.Values) {
 		// You ca use tags here...
 		// tag := typ.Field(i).Tag.Get("tagname")
 		// Convert each type into a string for the url.Values string map
+
+		fieldName := typ.Field(i).Name
+		if typ.Field(i).Tag.Get("form") != "" {
+			fieldName = typ.Field(i).Tag.Get("form")
+		}
+
+		skipSet := false
+
 		var v string
 		switch f.Interface().(type) {
 		case int, int8, int16, int32, int64:
@@ -300,12 +312,16 @@ func structToValues(i interface{}) (values url.Values) {
 			v = string(f.Bytes())
 		case string:
 			v = f.String()
+		case []string:
+			for idx := 0; idx < f.Len(); idx += 1 {
+				values.Set(fmt.Sprintf("%s[%d]", fieldName, idx), f.Index(idx).String())
+			}
+			skipSet = true
 		}
-		fieldName := typ.Field(i).Name
-		if typ.Field(i).Tag.Get("form") != "" {
-			fieldName = typ.Field(i).Tag.Get("form")
+
+		if skipSet == false {
+			values.Set(fieldName, v)
 		}
-		values.Set(fieldName, v)
 	}
 	return
 }

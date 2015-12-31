@@ -13,6 +13,7 @@ const tasksUpdatePath = "api/maniphest.update"
 // See: https://secure.phabricator.com/conduit/ (and search for maniphest)
 type TasksService interface {
 	List(*ListOptions) ([]Task, *Response, error)
+	Search(*TaskSearchRequest) ([]Task, *Response, error)
 	Get(string) (*Task, *Response, error)
 	Create(*TaskCreateRequest) (*Task, *Response, error)
 	Update(*TaskUpdateRequest) (*Response, error)
@@ -81,17 +82,16 @@ type TaskGetRequest struct {
 }
 
 type TaskSearchRequest struct {
-	TaskId       string `form:"task_id"`
-	IDs          string `form:"ids"`
-	PHIDs        string `form:"phids"`
-	OwnerPHIDs   string `form:"ownerPHIDs"`
-	AuthorPHIDs  string `form:"authorPHIDs"`
-	ProjectPHIDs string `form:"projectPHIDs"`
-	FullText     string `form:"full_text"`
-	Status       string `form:"status"`
-	Order        string `form:"order"`
-	Limit        string `form:"limit"`
-	Offset       string `form:"offset"`
+	IDs          string   `form:"ids"`
+	PHIDs        string   `form:"phids"`
+	OwnerPHIDs   []string `form:"ownerPHIDs"`
+	AuthorPHIDs  []string `form:"authorPHIDs"`
+	ProjectPHIDs []string `form:"projectPHIDs"`
+	FullText     string   `form:"fullText"`
+	Status       string   `form:"status"`
+	Order        string   `form:"order"`
+	Limit        string   `form:"limit"`
+	Offset       string   `form:"offset"`
 }
 
 // TaskCreateRequest represents a request to create a Task.
@@ -130,10 +130,25 @@ type TaskResponse struct {
 }
 
 // Search for tasks
-func (f *TasksServiceOp) Search(TaskSearchRequest) ([]Task, *Response, error) {
-	var list []Task
+func (f *TasksServiceOp) Search(searchRequest *TaskSearchRequest) ([]Task, *Response, error) {
+	path := tasksQueryPath
 
-	return list, nil, nil
+	req, err := f.client.NewRequest("POST", path, searchRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(TaskResponse)
+	resp, err := f.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	var list []Task
+	for _, task := range root.Tasks {
+		list = append(list, task)
+	}
+	return list, resp, err
 }
 
 // List all tasks.
